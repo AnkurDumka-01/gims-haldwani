@@ -12,6 +12,10 @@ function monthKey(year, month) {
 // Iterates every calendar month in [fromYear/fromMonth, toYear/toMonth], clipped to the
 // student's actual service window (date_of_joining .. service_end_date if set), pro-rating
 // the boundary months and deducting only approved Absent days from the rest.
+// A month is included only if its attendance record has cleared both review stages
+// (status = 'approved', which the state machine only reaches after 'hod_approved') —
+// months still pending, HoD-rejected, admin-rejected, or never submitted are left out
+// of the report entirely rather than silently paid in full.
 async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMonth) {
   const rate = Number(student.monthly_stipend_rate) || 0;
   const joining = student.date_of_joining ? new Date(student.date_of_joining) : null;
@@ -48,8 +52,10 @@ async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMo
       endDay = serviceEnd.getDate();
     }
 
+    if (!absentByMonth.has(key)) continue; // no fully-approved attendance record for this month
+
     const inServiceDays = Math.max(0, endDay - startDay + 1);
-    const absentDays = absentByMonth.get(key) || 0;
+    const absentDays = absentByMonth.get(key);
     const payableDays = Math.max(0, inServiceDays - absentDays);
 
     const dailyRate = totalDaysInMonth > 0 ? rate / totalDaysInMonth : 0;
