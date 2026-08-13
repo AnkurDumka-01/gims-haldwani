@@ -11,6 +11,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import Professors from './pages/admin/Professors';
 import Hods from './pages/admin/Hods';
 import Students from './pages/admin/Students';
+import ImportStudents from './pages/admin/ImportStudents';
 import AttendanceReview from './pages/admin/AttendanceReview';
 import StudentAnnualReport from './pages/admin/StudentAnnualReport';
 import AdminMonthlyReport from './pages/admin/MonthlyReport';
@@ -27,7 +28,8 @@ const adminLinks = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/professors', label: 'Professors' },
   { to: '/admin/hods', label: 'HoDs' },
-  { to: '/admin/students', label: 'Students' },
+  { to: '/admin/students', label: 'Students', end: true },
+  { to: '/admin/students/import', label: 'Import Students' },
   { to: '/admin/attendance', label: 'Attendance' },
   { to: '/admin/monthly-report', label: 'Monthly Report' },
   { to: '/admin/salary/individual', label: 'Individual Stipend' },
@@ -70,6 +72,9 @@ function AppRoutes() {
       } />
       <Route path="/admin/students" element={
         <ProtectedRoute role="admin"><Layout links={adminLinks}><Students /></Layout></ProtectedRoute>
+      } />
+      <Route path="/admin/students/import" element={
+        <ProtectedRoute role="admin"><Layout links={adminLinks}><ImportStudents /></Layout></ProtectedRoute>
       } />
       <Route path="/admin/attendance" element={
         <ProtectedRoute role="admin"><Layout links={adminLinks}><AttendanceReview /></Layout></ProtectedRoute>
