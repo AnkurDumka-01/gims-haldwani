@@ -3,7 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('./db');
 
-async function migrate() {
+// Every file in migrations/ uses IF NOT EXISTS-style guards, so re-running the full set is
+// always safe -- this can be (and is, from server.js) called on every server startup.
+async function runMigrations() {
   const dir = path.join(__dirname, 'migrations');
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
 
@@ -15,13 +17,22 @@ async function migrate() {
       await client.query(sql);
     }
     console.log('All migrations completed successfully.');
-  } catch (err) {
-    console.error('Migration failed:', err);
-    process.exitCode = 1;
   } finally {
+    // Release the client back to the pool, but leave the pool itself open -- server.js keeps
+    // using it for the life of the process. Only the CLI entry point below owns closing it.
     client.release();
-    await pool.end();
   }
 }
 
-migrate();
+// `npm run migrate` (a one-off CLI run, e.g. for a manual check) still works exactly as
+// before: run once, then close the pool and exit.
+if (require.main === module) {
+  runMigrations()
+    .catch((err) => {
+      console.error('Migration failed:', err);
+      process.exitCode = 1;
+    })
+    .finally(() => pool.end());
+}
+
+module.exports = { runMigrations };

@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const { runMigrations } = require('./migrate');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const professorRoutes = require('./routes/professorRoutes');
@@ -32,6 +33,18 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`GMC, HALDWANI backend listening on port ${PORT}`);
-});
+
+// Migrations run here (at boot, with the app's normal runtime DB access) rather than at
+// Render's build step -- the build container couldn't reach the database, which is exactly
+// why migrations/0006 (the PHMS columns) silently never applied and every student edit
+// started 500-ing. A migration failure is logged loudly but doesn't stop the server from
+// starting, since most of the app still works fine even if one migration is lagging.
+runMigrations()
+  .catch((err) => {
+    console.error('Startup migration failed -- some newer features may not work until this is resolved:', err);
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`GMC, HALDWANI backend listening on port ${PORT}`);
+    });
+  });
