@@ -1,9 +1,10 @@
 const asyncHandler = require('express-async-handler');
 const pool = require('../db');
-const { computeStipendForRange } = require('../utils/stipendCalculator');
+const { computeStipendForRange, isStipendApplicable } = require('../utils/stipendCalculator');
 const { computeTrainingYear } = require('../utils/attendanceSummary');
 const numberToWordsIndian = require('../utils/numberToWordsIndian');
 const generateIndividualStipendReportPdf = require('../utils/generateIndividualStipendReportPdf');
+const generateStipendCertificatePdf = require('../utils/generateStipendCertificatePdf');
 const generateBatchStipendReportPdf = require('../utils/generateBatchStipendReportPdf');
 const { INCOME_TAX_RATE } = require('../utils/salaryRules');
 
@@ -18,9 +19,13 @@ const getStudentById = async (id) => {
   return result.rows[0] || null;
 };
 
+// Returns null if the student doesn't exist, 'not_applicable' if they're PHMS with no
+// college stipend (stipend calculation deliberately doesn't apply -- use the attendance
+// summary instead), or the report object otherwise.
 const buildIndividualReport = async (studentId, fromYear, fromMonth, toYear, toMonth) => {
   const student = await getStudentById(studentId);
   if (!student) return null;
+  if (!isStipendApplicable(student)) return 'not_applicable';
 
   const { monthlyBreakdown, totalStipend, incomeTax, netPayable, rate } =
     await computeStipendForRange(student, fromYear, fromMonth, toYear, toMonth);
@@ -30,6 +35,9 @@ const buildIndividualReport = async (studentId, fromYear, fromMonth, toYear, toM
   return { student, monthlyBreakdown, totalStipend, incomeTax, netPayable, rate, trainingYear, amountInWords };
 };
 
+const NOT_APPLICABLE_MESSAGE =
+  'This student is PHMS with no stipend from the college -- stipend calculation does not apply. Use the Attendance Summary instead.';
+
 const getIndividualReport = asyncHandler(async (req, res) => {
   const { student_id, from_month, from_year, to_month, to_year } = req.query;
   if (!student_id || !from_month || !from_year || !to_month || !to_year) {
@@ -37,6 +45,7 @@ const getIndividualReport = asyncHandler(async (req, res) => {
   }
   const report = await buildIndividualReport(student_id, Number(from_year), Number(from_month), Number(to_year), Number(to_month));
   if (!report) return res.status(404).json({ message: 'Student not found.' });
+  if (report === 'not_applicable') return res.status(409).json({ message: NOT_APPLICABLE_MESSAGE });
   res.json(report);
 });
 
@@ -47,7 +56,19 @@ const downloadIndividualReportPdf = asyncHandler(async (req, res) => {
   }
   const report = await buildIndividualReport(student_id, Number(from_year), Number(from_month), Number(to_year), Number(to_month));
   if (!report) return res.status(404).json({ message: 'Student not found.' });
+  if (report === 'not_applicable') return res.status(409).json({ message: NOT_APPLICABLE_MESSAGE });
   generateIndividualStipendReportPdf(report, res);
+});
+
+const downloadIndividualCertificatePdf = asyncHandler(async (req, res) => {
+  const { student_id, from_month, from_year, to_month, to_year } = req.query;
+  if (!student_id || !from_month || !from_year || !to_month || !to_year) {
+    return res.status(400).json({ message: 'student_id, from_month, from_year, to_month and to_year are required.' });
+  }
+  const report = await buildIndividualReport(student_id, Number(from_year), Number(from_month), Number(to_year), Number(to_month));
+  if (!report) return res.status(404).json({ message: 'Student not found.' });
+  if (report === 'not_applicable') return res.status(409).json({ message: NOT_APPLICABLE_MESSAGE });
+  generateStipendCertificatePdf(report, res);
 });
 
 const buildBatchReport = async (batch, year, month) => {
@@ -116,6 +137,7 @@ const downloadBatchReportPdf = asyncHandler(async (req, res) => {
 module.exports = {
   getIndividualReport,
   downloadIndividualReportPdf,
+  downloadIndividualCertificatePdf,
   getBatchReport,
   downloadBatchReportPdf,
 };

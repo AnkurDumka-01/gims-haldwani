@@ -7,6 +7,7 @@ const admin = require('../controllers/adminController');
 const attendance = require('../controllers/attendanceAdminController');
 const salary = require('../controllers/salaryController');
 const studentImport = require('../controllers/studentImportController');
+const attendanceThreshold = require('../controllers/attendanceThresholdController');
 
 // In-memory (never written to disk) -- rows go straight to Postgres, and a 5MB cap is
 // generous for a student roster spreadsheet while ruling out a stray huge-file upload.
@@ -18,11 +19,13 @@ router.use(authMiddleware, requireRole('admin'));
 router.post('/professors', admin.createProfessor);
 router.get('/professors', admin.listProfessors);
 router.patch('/professors/:id/status', admin.updateProfessorStatus);
+router.put('/professors/:id', admin.updateProfessor);
 
 // Heads of Department
 router.post('/hods', admin.createHod);
 router.get('/hods', admin.listHods);
 router.patch('/hods/:id/status', admin.updateHodStatus);
+router.put('/hods/:id', admin.updateHod);
 
 // PG Students
 router.post('/students', admin.createStudent);
@@ -50,6 +53,11 @@ router.get('/monthly-report/pdf', attendance.downloadMonthlyReportPdf);
 // Stipend / salary reports
 router.get('/salary/individual-report', salary.getIndividualReport);
 router.get('/salary/individual-report/pdf', salary.downloadIndividualReportPdf);
+router.get('/salary/individual-report/certificate', salary.downloadIndividualCertificatePdf);
+
+// Attendance threshold report (dashboard)
+router.get('/reports/attendance-threshold', attendanceThreshold.getAttendanceThresholdReport);
+router.get('/reports/attendance-threshold/pdf', attendanceThreshold.downloadAttendanceThresholdReportPdf);
 router.get('/salary/batch-report', salary.getBatchReport);
 router.get('/salary/batch-report/pdf', salary.downloadBatchReportPdf);
 

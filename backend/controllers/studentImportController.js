@@ -26,7 +26,7 @@ const TEMPLATE_COLUMNS = [
 
 const downloadTemplate = asyncHandler(async (req, res) => {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'GIMS Haldwani Portal';
+  workbook.creator = 'GMC, HALDWANI Portal';
 
   const sheet = workbook.addWorksheet('Students');
   sheet.columns = TEMPLATE_COLUMNS.map((c) => ({ header: c.header, key: c.key, width: c.width }));

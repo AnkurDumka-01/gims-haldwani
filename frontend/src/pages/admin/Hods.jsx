@@ -5,10 +5,70 @@ import { DEPARTMENTS } from '../../constants/departments';
 
 const emptyForm = { name: '', email: '', password: '', department: '', phone: '' };
 
+function EditHodModal({ hod, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: hod.name || '', email: hod.email || '',
+    department: hod.department || '', phone: hod.phone || '', password: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await apiClient.put(`/admin/hods/${hod.id}`, form);
+      toast.success('HoD details updated.');
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update HoD.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-lg p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-semibold text-gray-800 mb-4">Edit HoD</h2>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input name="name" required placeholder="Full name" value={form.name} onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          <input name="email" type="email" required placeholder="Email" value={form.email} onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          <select name="department" required value={form.department} onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Select department</option>
+            {DEPARTMENTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          <input name="password" type="password" placeholder="New password (leave blank to keep current)" value={form.password} onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 border border-gray-300 rounded-md py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Hods() {
   const [hods, setHods] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const [editingHod, setEditingHod] = useState(null);
 
   const load = async () => {
     const { data } = await apiClient.get('/admin/hods');
@@ -97,7 +157,10 @@ export default function Hods() {
                       {h.is_active ? 'Active' : 'Disabled'}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <button onClick={() => setEditingHod(h)} className="text-xs text-blue-600 hover:underline mr-3">
+                      Edit
+                    </button>
                     <button onClick={() => toggleActive(h)} className="text-xs text-blue-600 hover:underline">
                       {h.is_active ? 'Disable' : 'Enable'}
                     </button>
@@ -111,6 +174,14 @@ export default function Hods() {
           </table>
         </div>
       </div>
+
+      {editingHod && (
+        <EditHodModal
+          hod={editingHod}
+          onClose={() => setEditingHod(null)}
+          onSaved={() => { setEditingHod(null); load(); }}
+        />
+      )}
     </div>
   );
 }

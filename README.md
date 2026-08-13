@@ -1,4 +1,4 @@
-# GIMS Haldwani — PG Attendance & Salary Portal
+# GMC, HALDWANI — PG Attendance & Salary Portal
 
 Web portal for tracking medical PG students' ("doctors") monthly attendance for salary/stipend purposes.
 

@@ -26,7 +26,7 @@ import HodMonthlyReport from './pages/hod/MonthlyReport';
 
 const adminLinks = [
   { to: '/admin', label: 'Dashboard', end: true },
-  { to: '/admin/professors', label: 'Professors' },
+  { to: '/admin/professors', label: 'Department' },
   { to: '/admin/hods', label: 'HoDs' },
   { to: '/admin/students', label: 'Students', end: true },
   { to: '/admin/students/import', label: 'Import Students' },

@@ -9,6 +9,14 @@ function monthKey(year, month) {
   return year * 12 + month;
 }
 
+// PHMS students (phms = true) who don't receive their stipend from the college
+// (stipend_from_college = false) are tracked for attendance only -- no stipend calculation
+// applies to them at all. Every other combination (phms = false, or phms = true with
+// stipend_from_college = true) follows the normal flow unchanged.
+function isStipendApplicable(student) {
+  return !(student.phms && student.stipend_from_college === false);
+}
+
 // Iterates every calendar month in [fromYear/fromMonth, toYear/toMonth], clipped to the
 // student's actual service window (date_of_joining .. service_end_date if set), pro-rating
 // the boundary months and deducting only approved Absent days from the rest.
@@ -18,6 +26,11 @@ function monthKey(year, month) {
 // of the report entirely rather than silently paid in full.
 async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMonth) {
   const rate = Number(student.monthly_stipend_rate) || 0;
+
+  if (!isStipendApplicable(student)) {
+    return { monthlyBreakdown: [], totalStipend: 0, incomeTax: 0, netPayable: 0, rate };
+  }
+
   const joining = student.date_of_joining ? new Date(student.date_of_joining) : null;
   const serviceEnd = student.service_end_date ? new Date(student.service_end_date) : null;
 
@@ -74,4 +87,4 @@ async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMo
   return { monthlyBreakdown, totalStipend, incomeTax, netPayable, rate };
 }
 
-module.exports = { computeStipendForRange, daysInMonth };
+module.exports = { computeStipendForRange, daysInMonth, isStipendApplicable };

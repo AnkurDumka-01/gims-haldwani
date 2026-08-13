@@ -1,7 +1,7 @@
 {
   "name": "gims-haldwani-backend",
   "version": "1.0.0",
-  "description": "GIMS Haldwani PG Attendance & Salary Portal - API",
+  "description": "GMC, HALDWANI PG Attendance & Salary Portal - API",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

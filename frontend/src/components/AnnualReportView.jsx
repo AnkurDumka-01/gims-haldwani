@@ -26,7 +26,7 @@ export default function AnnualReportView({ summaryUrl, pdfUrl, backTo }) {
 
   const handleDownload = async () => {
     try {
-      await downloadAttendancePdf(pdfUrl, `annual_attendance_${summary.student.roll_number}.pdf`);
+      await downloadAttendancePdf(pdfUrl, `leave_register_${summary.student.roll_number}.pdf`);
     } catch (err) {
       toast.error('Failed to download PDF.');
     }

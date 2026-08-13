@@ -15,7 +15,7 @@ function generateAttendancePdf(record, res) {
   );
   doc.pipe(res);
 
-  doc.fontSize(18).font('Helvetica-Bold').text('GIMS Haldwani', { align: 'center' });
+  doc.fontSize(18).font('Helvetica-Bold').text('GMC, HALDWANI', { align: 'center' });
   doc.fontSize(12).font('Helvetica').text('PG Student Attendance Certificate', { align: 'center' });
   doc.moveDown(1.5);
 

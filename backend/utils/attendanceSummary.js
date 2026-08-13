@@ -24,7 +24,7 @@ const emptyBucket = () => ({ cl_days: 0, academic_leave_days: 0, special_leave_d
 
 async function getStudentAttendanceSummary(studentId, { statuses = ['approved'] } = {}) {
   const studentResult = await pool.query(
-    `SELECT s.id, s.name, s.father_name, s.roll_number, s.subject_name, s.date_of_admission, s.date_of_joining, u.name AS professor_name
+    `SELECT s.id, s.name, s.father_name, s.roll_number, s.subject_name, s.batch, s.date_of_admission, s.date_of_joining, u.name AS professor_name
      FROM pg_students s
      LEFT JOIN users u ON u.id = s.professor_id
      WHERE s.id = $1`,

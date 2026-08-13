@@ -41,12 +41,12 @@ function generateAnnualReportPdf(summary, res) {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader(
     'Content-Disposition',
-    `attachment; filename=annual_attendance_${student.roll_number}.pdf`
+    `attachment; filename=leave_register_${student.roll_number}.pdf`
   );
   doc.pipe(res);
 
-  doc.fontSize(18).font('Helvetica-Bold').text('GIMS Haldwani', { align: 'center' });
-  doc.fontSize(12).font('Helvetica').text('PG Student Annual Attendance & Leave Summary', { align: 'center' });
+  doc.fontSize(18).font('Helvetica-Bold').text('GMC, HALDWANI', { align: 'center' });
+  doc.fontSize(12).font('Helvetica').text('PG Student Leave Register', { align: 'center' });
   doc.moveDown(1.2);
 
   const row = (label, value) => {
@@ -55,13 +55,19 @@ function generateAnnualReportPdf(summary, res) {
     doc.moveDown(0.3);
   };
 
-  row('Student Name:', student.name);
-  row("Father's Name:", student.father_name);
-  row('Roll Number:', student.roll_number);
+  // Two fields sharing a line: label/value, spacing, label/value.
+  const rowPair = (label1, value1, label2, value2) => {
+    doc.font('Helvetica-Bold').fontSize(11).text(label1, 50, doc.y, { continued: true });
+    doc.font('Helvetica').text(`${value1 ?? '-'}     `, { continued: true });
+    doc.font('Helvetica-Bold').text(label2, { continued: true });
+    doc.font('Helvetica').text(String(value2 ?? '-'));
+    doc.moveDown(0.3);
+  };
+
+  rowPair('Student Name:', student.name, "Father's Name:", student.father_name);
   row('Subject Name:', student.subject_name);
-  row('Supervising Professor:', student.professor_name);
-  row('Date of Admission:', formatDateMMDDYYYY(student.date_of_admission));
-  row('Date of Joining:', formatDateMMDDYYYY(student.date_of_joining));
+  row('Batch:', student.batch);
+  rowPair('Date of Admission:', formatDateMMDDYYYY(student.date_of_admission), 'Date of Joining:', formatDateMMDDYYYY(student.date_of_joining));
   doc.moveDown(0.8);
 
   let y = doc.y;
@@ -80,13 +86,23 @@ function generateAnnualReportPdf(summary, res) {
   );
   y += ROW_HEIGHT;
 
+  // Drawn as two independently-positioned text runs rather than pdfkit's `continued: true`
+  // flow -- continued text estimates where the second run starts from the first run's
+  // measured width, and that estimate was landing short (partly because "≥", which standard
+  // Helvetica/WinAnsi can't render, was throwing the measurement off), so "NOT ELIGIBLE" was
+  // overlapping the label instead of sitting after it. Measuring the label's actual rendered
+  // width with doc.widthOfString and placing the badge explicitly to the right of it removes
+  // the guesswork entirely -- it can never overlap regardless of label length.
   doc.y = y + 20;
-  doc.font('Helvetica-Bold').fontSize(11).text(
-    `Exam Eligibility (≥80% attendance, i.e. ≥ ${examEligibilityThreshold} days present): `,
-    50, doc.y, { continued: true }
-  );
-  doc.fillColor(examEligible ? 'green' : 'red').text(examEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE');
+  const eligibilityLabel = `Exam Eligibility (>=80% attendance, i.e. >= ${examEligibilityThreshold} days present): `;
+  doc.font('Helvetica-Bold').fontSize(11);
+  const eligibilityLabelWidth = doc.widthOfString(eligibilityLabel);
+  const eligibilityY = doc.y;
+  doc.text(eligibilityLabel, 50, eligibilityY, { lineBreak: false });
+  doc.fillColor(examEligible ? 'green' : 'red')
+    .text(examEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE', 50 + eligibilityLabelWidth + 6, eligibilityY, { lineBreak: false });
   doc.fillColor('black');
+  doc.y = eligibilityY + 20;
 
   doc.moveDown(2);
   doc.fontSize(9).font('Helvetica-Oblique').text(

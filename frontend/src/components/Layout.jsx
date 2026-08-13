@@ -22,7 +22,7 @@ export default function Layout({ links, children }) {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold text-gray-800">
             <GraduationCap className="w-6 h-6 text-blue-600" />
-            <span>GIMS Haldwani</span>
+            <span>GMC, HALDWANI</span>
             <span className="text-xs font-normal text-gray-400 ml-1">PG Attendance Portal</span>
           </div>
           <nav className="flex items-center gap-1">

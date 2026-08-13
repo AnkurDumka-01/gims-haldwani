@@ -31,7 +31,7 @@ export default function Login() {
       <div className="w-full max-w-sm bg-white p-8 rounded-lg shadow-sm border border-gray-200">
         <div className="flex flex-col items-center mb-6">
           <GraduationCap className="w-10 h-10 text-blue-600 mb-2" />
-          <h1 className="text-xl font-semibold text-gray-800">GIMS Haldwani</h1>
+          <h1 className="text-xl font-semibold text-gray-800">GMC, HALDWANI</h1>
           <p className="text-sm text-gray-500">PG Attendance & Salary Portal</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
