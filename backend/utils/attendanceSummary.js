@@ -20,7 +20,17 @@ function computeTrainingYear(dateOfJoining, year, month) {
   return Math.floor(monthIndex / 12) + 1;
 }
 
-const emptyBucket = () => ({ cl_days: 0, academic_leave_days: 0, special_leave_days: 0, absent_days: 0, days_present: 0 });
+const emptyBucket = () => ({
+  cl_days: 0, academic_leave_days: 0, special_leave_days: 0, absent_days: 0,
+  days_present: 0, total_working_days: 0,
+});
+
+// Percentage is computed on demand (not stored on the bucket itself) so callers that don't
+// need it -- e.g. generateAnnualReportPdf's existing columns -- are unaffected by this field.
+function percentageOf(bucket) {
+  if (!bucket || !bucket.total_working_days) return null;
+  return Math.round((bucket.days_present / bucket.total_working_days) * 10000) / 100;
+}
 
 async function getStudentAttendanceSummary(studentId, { statuses = ['approved'] } = {}) {
   const studentResult = await pool.query(
@@ -34,7 +44,7 @@ async function getStudentAttendanceSummary(studentId, { statuses = ['approved'] 
   const student = studentResult.rows[0];
 
   const recordsResult = await pool.query(
-    `SELECT year, month, cl_days, academic_leave_days, special_leave_days, absent_days, days_present
+    `SELECT year, month, cl_days, academic_leave_days, special_leave_days, absent_days, days_present, total_working_days
      FROM attendance_records
      WHERE student_id = $1 AND status = ANY($2)
      ORDER BY year, month`,
@@ -51,9 +61,12 @@ async function getStudentAttendanceSummary(studentId, { statuses = ['approved'] 
     bucket.special_leave_days += r.special_leave_days;
     bucket.absent_days += r.absent_days;
     bucket.days_present += r.days_present;
+    bucket.total_working_days += r.total_working_days;
   }
 
-  const years = Object.values(yearsMap).sort((a, b) => a.year - b.year);
+  const years = Object.values(yearsMap)
+    .map((y) => ({ ...y, percentage: percentageOf(y) }))
+    .sort((a, b) => a.year - b.year);
   const grandTotal = years.reduce(
     (acc, y) => ({
       cl_days: acc.cl_days + y.cl_days,
@@ -61,9 +74,11 @@ async function getStudentAttendanceSummary(studentId, { statuses = ['approved'] 
       special_leave_days: acc.special_leave_days + y.special_leave_days,
       absent_days: acc.absent_days + y.absent_days,
       days_present: acc.days_present + y.days_present,
+      total_working_days: acc.total_working_days + y.total_working_days,
     }),
     emptyBucket()
   );
+  grandTotal.percentage = percentageOf(grandTotal);
 
   const warnings = [];
   years.forEach((y) => {

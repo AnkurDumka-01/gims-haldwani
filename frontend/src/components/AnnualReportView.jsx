@@ -5,12 +5,12 @@ import { ArrowLeft, Download } from 'lucide-react';
 import apiClient from '../api/client';
 import { downloadAttendancePdf } from '../api/downloadPdf';
 
-function formatDateMMDDYYYY(date) {
+function formatDateDDMMYYYY(date) {
   if (!date) return '-';
   const d = new Date(date);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  return `${mm}/${dd}/${d.getFullYear()}`;
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 export default function AnnualReportView({ summaryUrl, pdfUrl, backTo }) {
@@ -55,7 +55,7 @@ export default function AnnualReportView({ summaryUrl, pdfUrl, backTo }) {
           {student.roll_number} · {student.subject_name} {student.father_name ? `· S/o D/o ${student.father_name}` : ''}
         </p>
         <p className="text-sm text-gray-500">
-          Supervising Professor: {student.professor_name || '-'} · Date of Admission: {formatDateMMDDYYYY(student.date_of_admission)} · Date of Joining: {formatDateMMDDYYYY(student.date_of_joining)}
+          Supervising Professor: {student.professor_name || '-'} · Date of Admission: {formatDateDDMMYYYY(student.date_of_admission)} · Date of Joining: {formatDateDDMMYYYY(student.date_of_joining)}
         </p>
       </div>
 

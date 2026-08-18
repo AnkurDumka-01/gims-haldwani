@@ -8,6 +8,7 @@ const attendance = require('../controllers/attendanceAdminController');
 const salary = require('../controllers/salaryController');
 const studentImport = require('../controllers/studentImportController');
 const attendanceThreshold = require('../controllers/attendanceThresholdController');
+const leaveRegister = require('../controllers/leaveRegisterController');
 
 // In-memory (never written to disk) -- rows go straight to Postgres, and a 5MB cap is
 // generous for a student roster spreadsheet while ruling out a stray huge-file upload.
@@ -60,5 +61,9 @@ router.get('/reports/attendance-threshold', attendanceThreshold.getAttendanceThr
 router.get('/reports/attendance-threshold/pdf', attendanceThreshold.downloadAttendanceThresholdReportPdf);
 router.get('/salary/batch-report', salary.getBatchReport);
 router.get('/salary/batch-report/pdf', salary.downloadBatchReportPdf);
+
+// Leave register (dashboard) -- select by student, batch, or department
+router.get('/reports/leave-register', leaveRegister.getLeaveRegister);
+router.get('/reports/leave-register/pdf', leaveRegister.downloadLeaveRegisterPdf);
 
 module.exports = router;

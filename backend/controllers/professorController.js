@@ -16,7 +16,7 @@ const myStudents = asyncHandler(async (req, res) => {
 const submitAttendance = asyncHandler(async (req, res) => {
   const {
     student_id, month, year, total_working_days, days_present,
-    cl_days, academic_leave_days, special_leave_days, absent_days, remarks,
+    cl_days, academic_leave_days, special_leave_days, absent_days, remarks, date_of_joining,
   } = req.body;
 
   if (!student_id || !month || !year || total_working_days == null || days_present == null) {
@@ -31,6 +31,17 @@ const submitAttendance = asyncHandler(async (req, res) => {
   );
   if (student.rows.length === 0) {
     return res.status(403).json({ message: 'This student is not mapped to you.' });
+  }
+
+  // Date of Joining drives training-year (Year 1/2/3) calculations across every report --
+  // normally admin-set, but a professor submitting attendance is well-placed to notice it's
+  // missing or wrong, so it's editable right here rather than requiring an admin round-trip.
+  if (date_of_joining) {
+    await pool.query(
+      `UPDATE pg_students SET date_of_joining = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [date_of_joining, student_id]
+    );
+    await logAction(req.user.id, 'update_student_date_of_joining', 'pg_student', student_id, { date_of_joining });
   }
 
   try {

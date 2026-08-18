@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/client';
 import { DEPARTMENTS } from '../../constants/departments';
+import CredentialsModal from '../../components/CredentialsModal';
+import ResetPasswordModal from '../../components/ResetPasswordModal';
 
 const emptyForm = { name: '', email: '', password: '', department: '', phone: '' };
 
@@ -69,6 +71,8 @@ export default function Hods() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [editingHod, setEditingHod] = useState(null);
+  const [resettingHod, setResettingHod] = useState(null);
+  const [credentials, setCredentials] = useState(null);
 
   const load = async () => {
     const { data } = await apiClient.get('/admin/hods');
@@ -87,12 +91,24 @@ export default function Hods() {
     try {
       await apiClient.post('/admin/hods', form);
       toast.success('HoD account created.');
+      setCredentials({ name: form.name, email: form.email, password: form.password });
       setForm(emptyForm);
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create HoD.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (hod, newPassword) => {
+    try {
+      await apiClient.put(`/admin/hods/${hod.id}`, { password: newPassword });
+      setResettingHod(null);
+      setCredentials({ name: hod.name, email: hod.email, password: newPassword });
+      toast.success('Password reset.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset password.');
     }
   };
 
@@ -161,6 +177,9 @@ export default function Hods() {
                     <button onClick={() => setEditingHod(h)} className="text-xs text-blue-600 hover:underline mr-3">
                       Edit
                     </button>
+                    <button onClick={() => setResettingHod(h)} className="text-xs text-blue-600 hover:underline mr-3">
+                      Reset Password
+                    </button>
                     <button onClick={() => toggleActive(h)} className="text-xs text-blue-600 hover:underline">
                       {h.is_active ? 'Disable' : 'Enable'}
                     </button>
@@ -180,6 +199,21 @@ export default function Hods() {
           hod={editingHod}
           onClose={() => setEditingHod(null)}
           onSaved={() => { setEditingHod(null); load(); }}
+        />
+      )}
+      {resettingHod && (
+        <ResetPasswordModal
+          title="Reset HoD Password"
+          name={resettingHod.name}
+          onClose={() => setResettingHod(null)}
+          onReset={(newPassword) => handleResetPassword(resettingHod, newPassword)}
+        />
+      )}
+      {credentials && (
+        <CredentialsModal
+          title="HoD Login Credentials"
+          {...credentials}
+          onClose={() => setCredentials(null)}
         />
       )}
     </div>

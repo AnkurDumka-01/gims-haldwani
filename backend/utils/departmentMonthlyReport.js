@@ -9,14 +9,16 @@ async function getDepartmentMonthlyReport(subjectName, month, year) {
   );
   const hodName = hodResult.rows[0]?.name || null;
 
+  // GIMS's standard report order: this report is already scoped to a single department, so
+  // the remaining sort keys are batch-wise, then alphabetical name within each batch.
   const recordsResult = await pool.query(
     `SELECT a.cl_days, a.absent_days, a.academic_leave_days, a.special_leave_days,
             a.days_present, a.total_working_days, a.remarks,
-            s.name AS student_name, s.date_of_joining
+            s.name AS student_name, s.batch, s.date_of_joining
      FROM attendance_records a
      JOIN pg_students s ON s.id = a.student_id
      WHERE s.subject_name = $1 AND a.month = $2 AND a.year = $3 AND a.status = 'approved'
-     ORDER BY s.name ASC`,
+     ORDER BY s.batch ASC, LOWER(s.name) ASC`,
     [subjectName, month, year]
   );
 
@@ -25,6 +27,7 @@ async function getDepartmentMonthlyReport(subjectName, month, year) {
     const noLeaveTaken = r.cl_days === 0 && r.absent_days === 0 && r.academic_leave_days === 0 && r.special_leave_days === 0;
     return {
       student_name: r.student_name,
+      batch: r.batch || '-',
       post: `JR-0${trainingYear}`,
       cl_days: r.cl_days,
       absent_days: r.absent_days,

@@ -4,6 +4,22 @@ import { toast } from 'react-toastify';
 import apiClient from '../../api/client';
 import { DEPARTMENTS } from '../../constants/departments';
 
+// Postgres DATE columns come back as full ISO timestamps at local midnight (e.g.
+// "2025-03-19T18:30:00.000Z" for 20 Mar in UTC+5:30) -- slicing the ISO string grabs the
+// UTC calendar date and is off by a day whenever the local offset is non-zero. This form
+// re-submits every field unconditionally on save, so that off-by-one silently shifted a
+// student's Date of Admission/Joining/Service End back a day on every single edit. Reading
+// back local getFullYear/getMonth/getDate (same fix as professor/SubmitAttendance.jsx) is
+// the correct conversion.
+function toDateInputValue(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const emptyForm = {
   name: '', father_name: '', roll_number: '', subject_name: '',
   date_of_admission: '', batch: '', date_of_joining: '',
@@ -112,11 +128,11 @@ function StudentFormFields({ form, onChange, professors, includeStatus }) {
 function EditStudentModal({ student, professors, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: student.name || '', father_name: student.father_name || '', roll_number: student.roll_number || '',
-    subject_name: student.subject_name || '', date_of_admission: student.date_of_admission?.slice(0, 10) || '',
-    batch: student.batch || '', date_of_joining: student.date_of_joining?.slice(0, 10) || '',
+    subject_name: student.subject_name || '', date_of_admission: toDateInputValue(student.date_of_admission),
+    batch: student.batch || '', date_of_joining: toDateInputValue(student.date_of_joining),
     professor_id: student.professor_id || '', phone: student.phone || '', email: student.email || '',
     account_number: student.account_number || '', monthly_stipend_rate: student.monthly_stipend_rate ?? '',
-    service_end_date: student.service_end_date?.slice(0, 10) || '', is_active: String(student.is_active ?? true),
+    service_end_date: toDateInputValue(student.service_end_date), is_active: String(student.is_active ?? true),
     phms: String(student.phms ?? false), stipend_from_college: String(student.stipend_from_college ?? true),
   });
   const [saving, setSaving] = useState(false);

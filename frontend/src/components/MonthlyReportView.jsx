@@ -100,6 +100,7 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
               <tr>
                 <th className="px-4 py-2">S.No.</th>
                 <th className="px-4 py-2">Name of Doctors</th>
+                <th className="px-4 py-2">Batch</th>
                 <th className="px-4 py-2">Post</th>
                 <th className="px-4 py-2">CL</th>
                 <th className="px-4 py-2">Absent</th>
@@ -112,6 +113,7 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
                 <tr key={i} className="border-t border-gray-100">
                   <td className="px-4 py-2">{i + 1}</td>
                   <td className="px-4 py-2">Dr. {r.student_name}</td>
+                  <td className="px-4 py-2">{r.batch}</td>
                   <td className="px-4 py-2">{r.post}</td>
                   <td className="px-4 py-2">{r.cl_days || '---'}</td>
                   <td className="px-4 py-2">{r.absent_days || '---'}</td>
@@ -120,7 +122,7 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
                 </tr>
               ))}
               {report.records.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">No approved records for this department and month.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-400">No approved records for this department and month.</td></tr>
               )}
             </tbody>
           </table>

@@ -10,12 +10,13 @@ function lastDayOfMonth(year, month) {
 }
 
 const COLUMNS = [
-  { label: 'S.No.', width: 35, align: 'center' },
-  { label: 'Name of Doctors', width: 165, align: 'left' },
-  { label: 'Post', width: 50, align: 'center' },
-  { label: 'CL', width: 40, align: 'center' },
-  { label: 'Absent', width: 50, align: 'center' },
-  { label: 'Total Present Days', width: 100, align: 'center' },
+  { label: 'S.No.', width: 30, align: 'center' },
+  { label: 'Name of Doctors', width: 150, align: 'left' },
+  { label: 'Batch', width: 40, align: 'center' },
+  { label: 'Post', width: 45, align: 'center' },
+  { label: 'CL', width: 35, align: 'center' },
+  { label: 'Absent', width: 45, align: 'center' },
+  { label: 'Total Present Days', width: 95, align: 'center' },
   { label: 'Remarks', width: 55, align: 'left' },
 ];
 const TABLE_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
@@ -59,7 +60,7 @@ function generateDepartmentMonthlyReportPdf(report, res) {
   doc.moveDown(1);
 
   const today = new Date();
-  doc.fontSize(10).text(`Dated: ${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`, { align: 'right' });
+  doc.fontSize(10).text(`Dated: ${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`, { align: 'right' });
   doc.moveDown(0.5);
   doc.text('To,');
   doc.text('The Principal & Dean');
@@ -86,6 +87,7 @@ function generateDepartmentMonthlyReportPdf(report, res) {
     y += drawRow(doc, y, [
       i + 1,
       r.student_name,
+      r.batch,
       r.post,
       r.cl_days || '---',
       r.absent_days || '---',

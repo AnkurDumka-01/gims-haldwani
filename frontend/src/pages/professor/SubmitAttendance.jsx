@@ -7,8 +7,22 @@ const now = new Date();
 
 const emptyForm = {
   student_id: '', month: now.getMonth() + 1, year: now.getFullYear(),
-  total_working_days: '', days_present: '',
+  total_working_days: '', days_present: '', date_of_joining: '',
   cl_days: 0, academic_leave_days: 0, special_leave_days: 0, absent_days: 0, remarks: '',
+};
+
+// Postgres DATE columns come back as full ISO timestamps at local midnight (e.g.
+// "2025-01-14T18:30:00.000Z" for 15 Jan in UTC+5:30) -- slicing the ISO string grabs the
+// UTC calendar date and is off by a day whenever the local offset is non-zero. Reading back
+// local getFullYear/getMonth/getDate (as the rest of this codebase already does for the
+// same reason, e.g. generateAnnualReportPdf's formatDateDDMMYYYY) recovers the right date.
+const toDateInputValue = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 export default function SubmitAttendance() {
@@ -21,6 +35,14 @@ export default function SubmitAttendance() {
   }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  // Auto-fills Date of Joining from the student's record on file when they're picked, so the
+  // field usually just needs confirming -- editable in case it's missing or wrong.
+  const handleStudentChange = (e) => {
+    const studentId = e.target.value;
+    const student = students.find((s) => String(s.id) === studentId);
+    setForm({ ...form, student_id: studentId, date_of_joining: toDateInputValue(student?.date_of_joining) });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,13 +66,20 @@ export default function SubmitAttendance() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-            <select name="student_id" required value={form.student_id} onChange={handleChange}
+            <select name="student_id" required value={form.student_id} onChange={handleStudentChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
               <option value="">Select a student</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>{s.name} ({s.roll_number})</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
+            <input type="date" name="date_of_joining" value={form.date_of_joining} onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            <p className="text-xs text-gray-500 mt-1">Auto-filled from the student's record — confirm or correct it if missing/wrong. This drives their training-year (Year 1/2/3) calculations.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -70,12 +99,12 @@ export default function SubmitAttendance() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Working Days</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Total Days in Month</label>
               <input type="number" name="total_working_days" min="0" required value={form.total_working_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total Days Present</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Days Present in Department</label>
               <input type="number" name="days_present" min="0" required value={form.days_present} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>

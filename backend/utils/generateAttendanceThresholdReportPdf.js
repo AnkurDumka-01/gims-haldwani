@@ -43,6 +43,9 @@ function generateAttendanceThresholdReportPdf({ minPercent, students, period }, 
 
   doc.fontSize(18).font('Helvetica-Bold').text('GMC, HALDWANI', { align: 'center' });
   doc.fontSize(12).font('Helvetica').text(`Students with Attendance >= ${minPercent}%`, { align: 'center' });
+  if (period?.batch) {
+    doc.fontSize(10).text(`Batch: ${period.batch}`, { align: 'center' });
+  }
   if (period?.fromMonth && period?.fromYear && period?.toMonth && period?.toYear) {
     doc.fontSize(10).text(
       `Period: ${MONTH_NAMES[period.fromMonth - 1]} ${period.fromYear} to ${MONTH_NAMES[period.toMonth - 1]} ${period.toYear}`,

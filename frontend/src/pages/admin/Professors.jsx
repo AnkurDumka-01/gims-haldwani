@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/client';
 import { DEPARTMENTS } from '../../constants/departments';
+import CredentialsModal from '../../components/CredentialsModal';
+import ResetPasswordModal from '../../components/ResetPasswordModal';
 
 const emptyForm = { name: '', email: '', password: '', department: '', phone: '' };
 
@@ -69,6 +71,8 @@ export default function Professors() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [editingProfessor, setEditingProfessor] = useState(null);
+  const [resettingProfessor, setResettingProfessor] = useState(null);
+  const [credentials, setCredentials] = useState(null);
 
   const load = async () => {
     const { data } = await apiClient.get('/admin/professors');
@@ -87,12 +91,24 @@ export default function Professors() {
     try {
       await apiClient.post('/admin/professors', form);
       toast.success('Professor account created.');
+      setCredentials({ name: form.name, email: form.email, password: form.password });
       setForm(emptyForm);
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create professor.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (professor, newPassword) => {
+    try {
+      await apiClient.put(`/admin/professors/${professor.id}`, { password: newPassword });
+      setResettingProfessor(null);
+      setCredentials({ name: professor.name, email: professor.email, password: newPassword });
+      toast.success('Password reset.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset password.');
     }
   };
 
@@ -161,6 +177,9 @@ export default function Professors() {
                     <button onClick={() => setEditingProfessor(p)} className="text-xs text-blue-600 hover:underline mr-3">
                       Edit
                     </button>
+                    <button onClick={() => setResettingProfessor(p)} className="text-xs text-blue-600 hover:underline mr-3">
+                      Reset Password
+                    </button>
                     <button onClick={() => toggleActive(p)} className="text-xs text-blue-600 hover:underline">
                       {p.is_active ? 'Disable' : 'Enable'}
                     </button>
@@ -180,6 +199,21 @@ export default function Professors() {
           professor={editingProfessor}
           onClose={() => setEditingProfessor(null)}
           onSaved={() => { setEditingProfessor(null); load(); }}
+        />
+      )}
+      {resettingProfessor && (
+        <ResetPasswordModal
+          title="Reset Professor Password"
+          name={resettingProfessor.name}
+          onClose={() => setResettingProfessor(null)}
+          onReset={(newPassword) => handleResetPassword(resettingProfessor, newPassword)}
+        />
+      )}
+      {credentials && (
+        <CredentialsModal
+          title="Professor Login Credentials"
+          {...credentials}
+          onClose={() => setCredentials(null)}
         />
       )}
     </div>

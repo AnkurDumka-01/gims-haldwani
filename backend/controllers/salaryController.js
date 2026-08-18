@@ -72,8 +72,10 @@ const downloadIndividualCertificatePdf = asyncHandler(async (req, res) => {
 });
 
 const buildBatchReport = async (batch, year, month) => {
+  // GIMS's standard report order: department-wise, then alphabetical name (batch is
+  // already fixed to a single value for this report, so it's not a separate sort key here).
   const studentsResult = await pool.query(
-    `SELECT * FROM pg_students WHERE batch = $1 AND is_active = TRUE ORDER BY name ASC`,
+    `SELECT * FROM pg_students WHERE batch = $1 AND is_active = TRUE ORDER BY LOWER(subject_name) ASC, LOWER(name) ASC`,
     [batch]
   );
 
