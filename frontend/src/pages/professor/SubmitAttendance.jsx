@@ -110,23 +110,23 @@ export default function SubmitAttendance() {
           </div>
 
           <div className="grid grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">CL</label>
+            <div className="flex flex-col">
+              <label className="flex items-end h-8 text-xs text-gray-500 mb-1 leading-tight">CL</label>
               <input type="number" name="cl_days" min="0" value={form.cl_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Academic Leave</label>
+            <div className="flex flex-col">
+              <label className="flex items-end h-8 text-xs text-gray-500 mb-1 leading-tight">Academic Leave</label>
               <input type="number" name="academic_leave_days" min="0" value={form.academic_leave_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Special Leave (Mat/Pat)</label>
+            <div className="flex flex-col">
+              <label className="flex items-end h-8 text-xs text-gray-500 mb-1 leading-tight">Special Leave (Mat/Pat)</label>
               <input type="number" name="special_leave_days" min="0" value={form.special_leave_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Absent</label>
+            <div className="flex flex-col">
+              <label className="flex items-end h-8 text-xs text-gray-500 mb-1 leading-tight">Absent</label>
               <input type="number" name="absent_days" min="0" value={form.absent_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
