@@ -19,7 +19,7 @@ function isStipendApplicable(student) {
 
 // Iterates every calendar month in [fromYear/fromMonth, toYear/toMonth], clipped to the
 // student's actual service window (date_of_joining .. service_end_date if set), pro-rating
-// the boundary months and deducting only approved Absent days from the rest.
+// the boundary months.
 // A month is included only if its attendance record has cleared both review stages
 // (status = 'approved', which the state machine only reaches after 'hod_approved') —
 // months still pending, HoD-rejected, admin-rejected, or never submitted are left out
@@ -34,15 +34,22 @@ async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMo
   const joining = student.date_of_joining ? new Date(student.date_of_joining) : null;
   const serviceEnd = student.service_end_date ? new Date(student.service_end_date) : null;
 
+  // Salary is based on Days Present + CL + Academic Leave + Special Leave (Mat/Pat) --
+  // i.e. every day except Absent, same set of categories as before, just read directly off
+  // the record instead of derived as "calendar days in the service window minus Absent".
   const attendanceResult = await pool.query(
-    `SELECT month, year, absent_days FROM attendance_records
+    `SELECT month, year, days_present, cl_days, academic_leave_days, special_leave_days
+     FROM attendance_records
      WHERE student_id = $1 AND status = 'approved'
        AND (year * 12 + month) BETWEEN $2 AND $3`,
     [student.id, monthKey(fromYear, fromMonth), monthKey(toYear, toMonth)]
   );
-  const absentByMonth = new Map();
+  const payableDaysByMonth = new Map();
   attendanceResult.rows.forEach((r) => {
-    absentByMonth.set(monthKey(r.year, r.month), r.absent_days);
+    payableDaysByMonth.set(
+      monthKey(r.year, r.month),
+      r.days_present + r.cl_days + r.academic_leave_days + r.special_leave_days
+    );
   });
 
   const monthlyBreakdown = [];
@@ -65,11 +72,13 @@ async function computeStipendForRange(student, fromYear, fromMonth, toYear, toMo
       endDay = serviceEnd.getDate();
     }
 
-    if (!absentByMonth.has(key)) continue; // no fully-approved attendance record for this month
+    if (!payableDaysByMonth.has(key)) continue; // no fully-approved attendance record for this month
 
     const inServiceDays = Math.max(0, endDay - startDay + 1);
-    const absentDays = absentByMonth.get(key);
-    const payableDays = Math.max(0, inServiceDays - absentDays);
+    // Capped at inServiceDays so a boundary month (student joined or left mid-month) can
+    // never be paid for more days than actually fell within their service window that
+    // month, even if the submitted record covers the full calendar month.
+    const payableDays = Math.min(inServiceDays, payableDaysByMonth.get(key));
 
     const dailyRate = totalDaysInMonth > 0 ? rate / totalDaysInMonth : 0;
     // Rounded to the nearest whole rupee per month (not 2 decimal places) to match
