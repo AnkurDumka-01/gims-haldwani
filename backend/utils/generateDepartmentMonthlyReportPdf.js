@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { DRP_DISCLAIMER } = require('./leaveRules');
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -40,7 +41,7 @@ function drawRow(doc, y, values, { bold = false, minHeight = 24 } = {}) {
 }
 
 function generateDepartmentMonthlyReportPdf(report, res) {
-  const { subject_name, month, year, hod_name, records } = report;
+  const { subject_name, month, year, hod_name, records, approvedDate, hasDrp } = report;
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
   res.setHeader('Content-Type', 'application/pdf');
@@ -59,8 +60,11 @@ function generateDepartmentMonthlyReportPdf(report, res) {
   doc.moveTo(50, doc.y).lineTo(50 + TABLE_WIDTH, doc.y).stroke();
   doc.moveDown(1);
 
-  const today = new Date();
-  doc.fontSize(10).text(`Dated: ${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`, { align: 'right' });
+  // "Dated" is the date this data was actually approved by the competent authority (see
+  // departmentMonthlyReport.js), not the date someone happens to click "download" -- those
+  // can be weeks apart. Falls back to today only when there's no approved data at all yet.
+  const datedOn = approvedDate ? new Date(approvedDate) : new Date();
+  doc.fontSize(10).text(`Dated: ${String(datedOn.getDate()).padStart(2, '0')}/${String(datedOn.getMonth() + 1).padStart(2, '0')}/${datedOn.getFullYear()}`, { align: 'right' });
   doc.moveDown(0.5);
   doc.text('To,');
   doc.text('The Principal & Dean');
@@ -92,13 +96,19 @@ function generateDepartmentMonthlyReportPdf(report, res) {
       r.cl_days || '---',
       r.absent_days || '---',
       r.total_present_label,
-      r.remarks,
+      r.is_drp ? `${r.remarks ? r.remarks + ' ' : ''}[DRP]` : r.remarks,
     ]);
   });
 
   if (records.length === 0) {
     doc.moveDown(1);
     doc.font('Helvetica-Oblique').fontSize(10).text('No approved attendance records for this department and month.');
+  }
+
+  if (hasDrp) {
+    doc.moveDown(0.6);
+    doc.fillColor('red').fontSize(8).text(`[DRP] ${DRP_DISCLAIMER}`, LEFT, doc.y, { width: TABLE_WIDTH });
+    doc.fillColor('black');
   }
 
   doc.moveDown(3);

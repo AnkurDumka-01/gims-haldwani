@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Check, X, Pencil } from 'lucide-react';
 import apiClient from '../../api/client';
+import { toDateInputValue } from '../../utils/dateInput';
+import { validateDayTotals } from '../../utils/attendanceValidation';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STATUS_STYLE = {
@@ -42,10 +44,18 @@ export default function AttendanceReview() {
       special_leave_days: r.special_leave_days,
       absent_days: r.absent_days,
       remarks: r.remarks || '',
+      is_drp: r.is_drp || false,
+      drp_from_date: toDateInputValue(r.drp_from_date),
+      drp_to_date: toDateInputValue(r.drp_to_date),
     });
   };
 
   const saveEdit = async (id) => {
+    const dayTotalsError = validateDayTotals(editForm);
+    if (dayTotalsError) {
+      toast.error(dayTotalsError);
+      return;
+    }
     try {
       await apiClient.put(`/hod/attendance/${id}`, editForm);
       toast.success('Record updated.');
@@ -113,6 +123,7 @@ export default function AttendanceReview() {
               <th className="px-4 py-2">Academic</th>
               <th className="px-4 py-2">Special</th>
               <th className="px-4 py-2">Absent</th>
+              <th className="px-4 py-2">DRP</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2 text-right">Actions</th>
             </tr>
@@ -157,6 +168,23 @@ export default function AttendanceReview() {
                         onChange={(e) => setEditForm({ ...editForm, absent_days: e.target.value })}
                         className="w-14 border border-gray-300 rounded px-1 py-0.5 text-xs" />
                     </td>
+                    <td className="px-4 py-2">
+                      <label className="flex items-center gap-1 text-xs">
+                        <input type="checkbox" checked={editForm.is_drp}
+                          onChange={(e) => setEditForm({ ...editForm, is_drp: e.target.checked })} />
+                        DRP
+                      </label>
+                      {editForm.is_drp && (
+                        <div className="flex flex-col gap-1 mt-1">
+                          <input type="date" value={editForm.drp_from_date}
+                            onChange={(e) => setEditForm({ ...editForm, drp_from_date: e.target.value })}
+                            className="w-28 border border-gray-300 rounded px-1 py-0.5 text-xs" />
+                          <input type="date" value={editForm.drp_to_date}
+                            onChange={(e) => setEditForm({ ...editForm, drp_to_date: e.target.value })}
+                            className="w-28 border border-gray-300 rounded px-1 py-0.5 text-xs" />
+                        </div>
+                      )}
+                    </td>
                   </>
                 ) : (
                   <>
@@ -166,6 +194,13 @@ export default function AttendanceReview() {
                     <td className="px-4 py-2">{r.academic_leave_days}</td>
                     <td className="px-4 py-2">{r.special_leave_days}</td>
                     <td className="px-4 py-2">{r.absent_days}</td>
+                    <td className="px-4 py-2">
+                      {r.is_drp && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700" title={`${toDateInputValue(r.drp_from_date)} to ${toDateInputValue(r.drp_to_date)}`}>
+                          DRP
+                        </span>
+                      )}
+                    </td>
                   </>
                 )}
 
@@ -223,7 +258,7 @@ export default function AttendanceReview() {
               </tr>
             ))}
             {records.length === 0 && (
-              <tr><td colSpan={12} className="px-4 py-6 text-center text-gray-400">No records found.</td></tr>
+              <tr><td colSpan={13} className="px-4 py-6 text-center text-gray-400">No records found.</td></tr>
             )}
           </tbody>
         </table>

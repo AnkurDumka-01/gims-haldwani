@@ -1,9 +1,18 @@
 const PDFDocument = require('pdfkit');
+const { DRP_DISCLAIMER } = require('./leaveRules');
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+
+function formatDateDDMMYYYY(date) {
+  if (!date) return '-';
+  const d = new Date(date);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
 
 function generateAttendancePdf(record, res) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -53,12 +62,20 @@ function generateAttendancePdf(record, res) {
   row('Status:', record.status.toUpperCase());
   row('Approved By:', record.reviewed_by_name);
   row('Approved On:', record.reviewed_at ? new Date(record.reviewed_at).toLocaleDateString('en-IN') : '-');
+  if (record.is_drp) {
+    row('DRP Period:', `${formatDateDDMMYYYY(record.drp_from_date)} to ${formatDateDDMMYYYY(record.drp_to_date)}`);
+  }
 
   doc.moveDown(3);
   doc.fontSize(10).font('Helvetica-Oblique').text(
     'This is a system-generated document confirming approved attendance for salary/stipend processing.',
     { align: 'center' }
   );
+  if (record.is_drp) {
+    doc.moveDown(0.4);
+    doc.fillColor('red').text(DRP_DISCLAIMER, { align: 'center' });
+    doc.fillColor('black');
+  }
 
   doc.end();
 }

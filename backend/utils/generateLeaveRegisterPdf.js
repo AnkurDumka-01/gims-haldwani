@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { DRP_DISCLAIMER } = require('./leaveRules');
 
 // Matches the institution's own "LEAVE REGISTER" paper form: one row per student, a
 // "1st Year Total" column-group (that student's own Year 1 attendance, from date of
@@ -47,7 +48,7 @@ const HEADER_ROW_HEIGHT = 28;
 const BODY_ROW_HEIGHT = 30;
 
 function zeroBucket() {
-  return { days_present: 0, cl_days: 0, absent_days: 0, special_leave_days: 0, academic_leave_days: 0, percentage: null };
+  return { days_present: 0, cl_days: 0, absent_days: 0, special_leave_days: 0, academic_leave_days: 0, percentage: null, drpPeriods: [] };
 }
 
 function drawHeader(doc, y) {
@@ -126,9 +127,13 @@ function drawRow(doc, y, row, sl) {
   });
 
   doc.rect(x, y, REMARKS_COLUMN.width, BODY_ROW_HEIGHT).stroke();
+  if (row.grandTotal.drpPeriods.length > 0) {
+    doc.fillColor('red').fontSize(7).text('DRP*', x + 2, y + 6, { width: REMARKS_COLUMN.width - 4, align: REMARKS_COLUMN.align });
+    doc.fillColor('black');
+  }
 }
 
-function generateLeaveRegisterPdf({ department, batch, academicSession, dateOfPreparation, rows }, res) {
+function generateLeaveRegisterPdf({ department, batch, academicSession, dateApproved, hasDrp, rows }, res) {
   const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: LEFT });
 
   const filenamePart = rows.length === 1 ? rows[0].student.roll_number : (batch || department || 'register');
@@ -147,7 +152,7 @@ function generateLeaveRegisterPdf({ department, batch, academicSession, dateOfPr
   field('Department of:', department);
   field('Attendance Details [Leave Register] of Batch:', batch);
   field('Academic Session:', academicSession);
-  field('Date of Preparation:', dateOfPreparation);
+  field('Date Approved:', dateApproved);
   doc.moveDown(0.6);
 
   let y = doc.y;
@@ -181,6 +186,11 @@ function generateLeaveRegisterPdf({ department, batch, academicSession, dateOfPr
     'The attendance percentage shall be calculated from the individual Date of Joining of each student. Only approved monthly attendance submissions are reflected. This is a system-generated document.',
     LEFT, doc.y, { width: TABLE_WIDTH }
   );
+  if (hasDrp) {
+    doc.moveDown(0.3);
+    doc.fillColor('red').text(`* DRP: ${DRP_DISCLAIMER}`, LEFT, doc.y, { width: TABLE_WIDTH });
+    doc.fillColor('black');
+  }
   doc.moveDown(1);
 
   doc.font('Helvetica-Bold').fontSize(9).text('Certification', LEFT, doc.y);

@@ -4,6 +4,8 @@ const { logAction } = require('../utils/auditLog');
 const generateAttendancePdf = require('../utils/generateAttendancePdf');
 const generateAnnualReportPdf = require('../utils/generateAnnualReportPdf');
 const { getStudentAttendanceSummary } = require('../utils/attendanceSummary');
+const { validateDrpFields, normalizeDrpFields } = require('../utils/drpValidation');
+const { validateDayTotals } = require('../utils/attendanceValidation');
 
 const myStudents = asyncHandler(async (req, res) => {
   const result = await pool.query(
@@ -24,6 +26,13 @@ const submitAttendance = asyncHandler(async (req, res) => {
       message: 'student_id, month, year, total_working_days and days_present are required.',
     });
   }
+
+  const drpError = validateDrpFields(req.body);
+  if (drpError) return res.status(400).json({ message: drpError });
+  const { is_drp, drp_from_date, drp_to_date } = normalizeDrpFields(req.body);
+
+  const totalsError = validateDayTotals(req.body);
+  if (totalsError) return res.status(400).json({ message: totalsError });
 
   const student = await pool.query(
     'SELECT id FROM pg_students WHERE id = $1 AND professor_id = $2',
@@ -48,12 +57,14 @@ const submitAttendance = asyncHandler(async (req, res) => {
     const result = await pool.query(
       `INSERT INTO attendance_records
         (student_id, professor_id, submitted_by, month, year, total_working_days, days_present,
-         cl_days, academic_leave_days, special_leave_days, absent_days, remarks)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         cl_days, academic_leave_days, special_leave_days, absent_days, remarks,
+         is_drp, drp_from_date, drp_to_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         student_id, req.user.id, req.user.id, month, year, total_working_days, days_present,
         cl_days || 0, academic_leave_days || 0, special_leave_days || 0, absent_days || 0, remarks || null,
+        is_drp, drp_from_date, drp_to_date,
       ]
     );
     await logAction(req.user.id, 'submit_attendance', 'attendance_record', result.rows[0].id, { student_id, month, year });

@@ -335,11 +335,21 @@ function LeaveRegisterReport() {
                   <td className="px-3 py-2">{r.student.subject_name}</td>
                   <td className="px-3 py-2">{r.student.batch || '-'}</td>
                   <td className="px-3 py-2">{r.yearOne.days_present} / {r.yearOne.percentage === null ? '-' : `${r.yearOne.percentage.toFixed(2)}%`}</td>
-                  <td className="px-3 py-2">{r.grandTotal.days_present} / {r.grandTotal.percentage === null ? '-' : `${r.grandTotal.percentage.toFixed(2)}%`}</td>
+                  <td className="px-3 py-2">
+                    {r.grandTotal.days_present} / {r.grandTotal.percentage === null ? '-' : `${r.grandTotal.percentage.toFixed(2)}%`}
+                    {r.grandTotal.drpPeriods?.length > 0 && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">DRP</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {result.hasDrp && (
+            <div className="px-3 py-2 border-t border-amber-200 bg-amber-50 text-xs text-amber-800">
+              DRP: Subject to verification of working days and absent from DRP completion certificate issued by competent authority.
+            </div>
+          )}
         </div>
       )}
     </div>

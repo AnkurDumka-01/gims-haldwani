@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const { DRP_DISCLAIMER } = require('./leaveRules');
 
 function formatDateDDMMYYYY(date) {
   if (!date) return '-';
@@ -35,7 +36,7 @@ function drawRow(doc, y, values, { bold = false, fill = null } = {}) {
 }
 
 function generateAnnualReportPdf(summary, res) {
-  const { student, years, grandTotal, examEligible, examEligibilityThreshold } = summary;
+  const { student, years, grandTotal, examEligible, examEligibilityThreshold, tenure, hasDrp } = summary;
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
   res.setHeader('Content-Type', 'application/pdf');
@@ -104,11 +105,51 @@ function generateAnnualReportPdf(summary, res) {
   doc.fillColor('black');
   doc.y = eligibilityY + 20;
 
+  // Same explicit-positioning approach as the eligibility badge above, for the same
+  // "≥"-measurement reason -- see that block's comment.
+  const tenureLabel = `JR Fellowship Tenure (${tenure.requiredDays} days required, ${tenure.daysServed} served): `;
+  doc.font('Helvetica-Bold').fontSize(11);
+  const tenureLabelWidth = doc.widthOfString(tenureLabel);
+  const tenureY = doc.y;
+  doc.text(tenureLabel, 50, tenureY, { lineBreak: false });
+  doc.fillColor(tenure.completed ? 'green' : 'red')
+    .text(tenure.completed ? 'COMPLETED' : `${tenure.shortfallDays} DAYS SHORT`, 50 + tenureLabelWidth + 6, tenureY, { lineBreak: false });
+  doc.fillColor('black');
+  doc.y = tenureY + 20;
+
+  doc.font('Helvetica').fontSize(9).text(
+    `(Served = ${tenure.daysPresent} days present + ${tenure.creditedClDays} CL + ${tenure.creditedAcademicLeaveDays} Academic Leave, each credited up to its tenure cap of ${tenure.clTenureCap} / ${tenure.academicLeaveTenureCap})`,
+    50, doc.y, { width: TABLE_WIDTH }
+  );
+  doc.moveDown(0.4);
+
+  if (!tenure.completed && tenure.extendedEndDate) {
+    doc.font('Helvetica').fontSize(10).text(
+      `Nominal tenure end (3 years from joining): ${formatDateDDMMYYYY(tenure.nominalEndDate)}   ->   Extended tenure end: ${formatDateDDMMYYYY(tenure.extendedEndDate)}`,
+      50, doc.y, { width: TABLE_WIDTH }
+    );
+    doc.moveDown(0.5);
+  }
+
+  if (hasDrp) {
+    doc.moveDown(0.6);
+    const periods = grandTotal.drpPeriods
+      .map((p) => `${formatDateDDMMYYYY(p.from)} to ${formatDateDDMMYYYY(p.to)}`)
+      .join(', ');
+    doc.font('Helvetica-Bold').fontSize(10).text('DRP Period(s):', 50, doc.y, { continued: true });
+    doc.font('Helvetica').text(` ${periods}`);
+  }
+
   doc.moveDown(2);
   doc.fontSize(9).font('Helvetica-Oblique').text(
     'Only approved monthly attendance submissions are reflected in this summary. This is a system-generated document.',
     50, doc.y, { width: TABLE_WIDTH, align: 'center' }
   );
+  if (hasDrp) {
+    doc.moveDown(0.4);
+    doc.fillColor('red').text(DRP_DISCLAIMER, 50, doc.y, { width: TABLE_WIDTH, align: 'center' });
+    doc.fillColor('black');
+  }
 
   doc.end();
 }

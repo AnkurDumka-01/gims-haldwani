@@ -5,6 +5,14 @@ import apiClient from '../api/client';
 import { downloadAttendancePdf } from '../api/downloadPdf';
 import { DEPARTMENTS } from '../constants/departments';
 
+function formatDateDDMMYYYY(date) {
+  if (!date) return '-';
+  const d = new Date(date);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const now = new Date();
 
@@ -94,6 +102,7 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
         <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
           <div className="px-4 py-3 border-b border-gray-100 text-sm text-gray-600">
             Department of {report.subject_name} · {MONTHS[report.month - 1]} {report.year} · HoD: {report.hod_name || 'Not assigned'}
+            {report.approvedDate && <> · Dated: {formatDateDDMMYYYY(report.approvedDate)}</>}
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 text-left">
@@ -118,7 +127,14 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
                   <td className="px-4 py-2">{r.cl_days || '---'}</td>
                   <td className="px-4 py-2">{r.absent_days || '---'}</td>
                   <td className="px-4 py-2">{r.total_present_label}</td>
-                  <td className="px-4 py-2">{r.remarks || '-'}</td>
+                  <td className="px-4 py-2">
+                    {r.remarks || '-'}
+                    {r.is_drp && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700" title={`${formatDateDDMMYYYY(r.drp_from_date)} to ${formatDateDDMMYYYY(r.drp_to_date)}`}>
+                        DRP
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {report.records.length === 0 && (
@@ -126,6 +142,11 @@ export default function MonthlyReportView({ baseUrl, departmentSelectable }) {
               )}
             </tbody>
           </table>
+          {report.hasDrp && (
+            <div className="px-4 py-3 border-t border-amber-200 bg-amber-50 text-xs text-amber-800">
+              DRP: Subject to verification of working days and absent from DRP completion certificate issued by competent authority.
+            </div>
+          )}
         </div>
       )}
     </div>

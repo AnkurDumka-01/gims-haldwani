@@ -51,8 +51,8 @@ async function buildLeaveRegister(query) {
   const { mode, rows: studentRows } = await resolveStudents({ studentId, batch, subjectName });
 
   const summaries = await Promise.all(studentRows.map((s) => getStudentAttendanceSummary(s.id)));
-  const unsortedRows = summaries
-    .filter(Boolean)
+  const includedSummaries = summaries.filter(Boolean);
+  const unsortedRows = includedSummaries
     .map((summary) => ({
       student: summary.student,
       yearOne: summary.years.find((y) => y.year === 1) || { year: 1, ...zeroBucket() },
@@ -68,9 +68,18 @@ async function buildLeaveRegister(query) {
   const department = mode === 'department' ? subjectName : uniformOrMultiple(rows.map((r) => r.student.subject_name));
   const resolvedBatch = mode === 'batch' ? batch : uniformOrMultiple(rows.map((r) => r.student.batch));
 
-  const dateOfPreparation = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+  // "Date of Preparation" is the date this data was actually approved by the competent
+  // authority (the latest final admin approval among all included students' records), not
+  // the date someone happens to click "download" -- those can be weeks apart. Falls back to
+  // today only when there's genuinely no approved data yet (e.g. an empty selection).
+  const latestApprovedAt = includedSummaries.reduce(
+    (max, s) => (s.latestApprovedAt && (!max || s.latestApprovedAt > max) ? s.latestApprovedAt : max),
+    null
+  );
+  const dateApproved = (latestApprovedAt ? new Date(latestApprovedAt) : new Date()).toLocaleDateString('en-GB'); // DD/MM/YYYY
+  const hasDrp = includedSummaries.some((s) => s.hasDrp);
 
-  return { mode, department, batch: resolvedBatch, academicSession, dateOfPreparation, rows };
+  return { mode, department, batch: resolvedBatch, academicSession, dateApproved, hasDrp, rows };
 }
 
 function validateSelection(query, res) {

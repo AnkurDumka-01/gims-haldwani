@@ -35,7 +35,7 @@ export default function AnnualReportView({ summaryUrl, pdfUrl, backTo }) {
   if (loading) return <div className="text-gray-400 text-sm">Loading report...</div>;
   if (!summary) return <div className="text-gray-400 text-sm">No data available.</div>;
 
-  const { student, years, grandTotal, warnings, examEligible, examEligibilityThreshold } = summary;
+  const { student, years, grandTotal, warnings, examEligible, examEligibilityThreshold, tenure, hasDrp } = summary;
 
   return (
     <div>
@@ -103,9 +103,40 @@ export default function AnnualReportView({ summaryUrl, pdfUrl, backTo }) {
         </table>
       </div>
 
-      <div className={`rounded-lg p-4 text-sm font-medium ${examEligible ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+      <div className={`rounded-lg p-4 text-sm font-medium mb-4 ${examEligible ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
         Exam Eligibility (≥ {examEligibilityThreshold} days present required): {examEligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}
       </div>
+
+      {tenure && (
+        <div className={`rounded-lg p-4 text-sm font-medium ${tenure.completed ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <div>
+            JR Fellowship Tenure ({tenure.requiredDays} days required, {tenure.daysServed} served):{' '}
+            {tenure.completed ? 'COMPLETED' : `${tenure.shortfallDays} DAYS SHORT`}
+          </div>
+          <div className="font-normal mt-1 text-xs opacity-80">
+            Served = {tenure.daysPresent} days present + {tenure.creditedClDays} CL + {tenure.creditedAcademicLeaveDays} Academic Leave
+            (each credited up to its tenure cap of {tenure.clTenureCap} / {tenure.academicLeaveTenureCap})
+          </div>
+          {!tenure.completed && tenure.extendedEndDate && (
+            <div className="font-normal mt-1 text-xs">
+              Nominal tenure end (3 years from joining): {formatDateDDMMYYYY(tenure.nominalEndDate)}
+              {' '}&rarr;{' '}
+              Extended tenure end: {formatDateDDMMYYYY(tenure.extendedEndDate)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasDrp && (
+        <div className="rounded-lg p-4 text-sm bg-amber-50 border border-amber-200 text-amber-800 mt-4">
+          <div className="font-medium mb-1">
+            DRP Period(s): {grandTotal.drpPeriods.map((p) => `${formatDateDDMMYYYY(p.from)} to ${formatDateDDMMYYYY(p.to)}`).join(', ')}
+          </div>
+          <div className="text-xs">
+            Subject to verification of working days and absent from DRP completion certificate issued by competent authority.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

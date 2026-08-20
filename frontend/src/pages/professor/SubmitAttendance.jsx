@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/client';
+import { toDateInputValue } from '../../utils/dateInput';
+import { dayTotalsSum, validateDayTotals } from '../../utils/attendanceValidation';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const now = new Date();
@@ -9,20 +11,7 @@ const emptyForm = {
   student_id: '', month: now.getMonth() + 1, year: now.getFullYear(),
   total_working_days: '', days_present: '', date_of_joining: '',
   cl_days: 0, academic_leave_days: 0, special_leave_days: 0, absent_days: 0, remarks: '',
-};
-
-// Postgres DATE columns come back as full ISO timestamps at local midnight (e.g.
-// "2025-01-14T18:30:00.000Z" for 15 Jan in UTC+5:30) -- slicing the ISO string grabs the
-// UTC calendar date and is off by a day whenever the local offset is non-zero. Reading back
-// local getFullYear/getMonth/getDate (as the rest of this codebase already does for the
-// same reason, e.g. generateAnnualReportPdf's formatDateDDMMYYYY) recovers the right date.
-const toDateInputValue = (isoString) => {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  is_drp: false, drp_from_date: '', drp_to_date: '',
 };
 
 export default function SubmitAttendance() {
@@ -34,7 +23,10 @@ export default function SubmitAttendance() {
     apiClient.get('/professor/students').then(({ data }) => setStudents(data));
   }, []);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
+  };
 
   // Auto-fills Date of Joining from the student's record on file when they're picked, so the
   // field usually just needs confirming -- editable in case it's missing or wrong.
@@ -44,8 +36,15 @@ export default function SubmitAttendance() {
     setForm({ ...form, student_id: studentId, date_of_joining: toDateInputValue(student?.date_of_joining) });
   };
 
+  const daySum = dayTotalsSum(form);
+  const dayTotalsError = validateDayTotals(form);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (dayTotalsError) {
+      toast.error(dayTotalsError);
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await apiClient.post('/professor/attendance', form);
@@ -131,6 +130,36 @@ export default function SubmitAttendance() {
               <input type="number" name="absent_days" min="0" value={form.absent_days} onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
+          </div>
+
+          <p className={`text-xs ${dayTotalsError ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+            Present + CL + Academic + Special + Absent = {daySum}
+            {form.total_working_days !== '' && ` (must equal Total Days in Month, ${form.total_working_days})`}
+          </p>
+
+          <div className="border border-amber-200 bg-amber-50 rounded-md p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input type="checkbox" name="is_drp" checked={form.is_drp} onChange={handleChange}
+                className="rounded border-gray-300" />
+              On DRP (District Residency Programme)
+            </label>
+            {form.is_drp && (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">DRP From</label>
+                  <input type="date" name="drp_from_date" required={form.is_drp} value={form.drp_from_date} onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">DRP To</label>
+                  <input type="date" name="drp_to_date" required={form.is_drp} value={form.drp_to_date} onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                </div>
+                <p className="col-span-2 text-xs text-amber-700">
+                  Every report for this month will note that working days/absent are subject to verification from the DRP completion certificate.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>

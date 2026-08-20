@@ -6,6 +6,8 @@ const generateAnnualReportPdf = require('../utils/generateAnnualReportPdf');
 const { getStudentAttendanceSummary } = require('../utils/attendanceSummary');
 const { getDepartmentMonthlyReport } = require('../utils/departmentMonthlyReport');
 const generateDepartmentMonthlyReportPdf = require('../utils/generateDepartmentMonthlyReportPdf');
+const { validateDrpFields, normalizeDrpFields } = require('../utils/drpValidation');
+const { validateDayTotals } = require('../utils/attendanceValidation');
 
 const ATTENDANCE_SELECT = `
   SELECT a.*, s.name AS student_name, s.roll_number, s.subject_name AS student_subject_name,
@@ -66,13 +68,41 @@ const updateAttendance = asyncHandler(async (req, res) => {
     cl_days, academic_leave_days, special_leave_days, absent_days, remarks,
   } = req.body;
 
-  const existing = await pool.query('SELECT status FROM attendance_records WHERE id = $1', [id]);
+  const existing = await pool.query(
+    `SELECT status, is_drp, drp_from_date, drp_to_date,
+            total_working_days, days_present, cl_days, academic_leave_days, special_leave_days, absent_days
+     FROM attendance_records WHERE id = $1`,
+    [id]
+  );
   if (existing.rows.length === 0) {
     return res.status(404).json({ message: 'Attendance record not found.' });
   }
   if (existing.rows[0].status !== 'hod_approved') {
     return res.status(400).json({ message: 'Only HoD-approved records can be edited by admin. Approve/reject stands as the final state.' });
   }
+
+  // See hodController.js's updateAttendance for why these are hard-set, not COALESCE'd.
+  const mergedDrp = {
+    is_drp: req.body.is_drp !== undefined ? req.body.is_drp : existing.rows[0].is_drp,
+    drp_from_date: req.body.drp_from_date !== undefined ? req.body.drp_from_date : existing.rows[0].drp_from_date,
+    drp_to_date: req.body.drp_to_date !== undefined ? req.body.drp_to_date : existing.rows[0].drp_to_date,
+  };
+  const drpError = validateDrpFields(mergedDrp);
+  if (drpError) return res.status(400).json({ message: drpError });
+  const { is_drp, drp_from_date, drp_to_date } = normalizeDrpFields(mergedDrp);
+
+  // See hodController.js's updateAttendance for why this is merged onto the existing row
+  // before validating.
+  const mergedTotals = {
+    total_working_days: total_working_days ?? existing.rows[0].total_working_days,
+    days_present: days_present ?? existing.rows[0].days_present,
+    cl_days: cl_days ?? existing.rows[0].cl_days,
+    academic_leave_days: academic_leave_days ?? existing.rows[0].academic_leave_days,
+    special_leave_days: special_leave_days ?? existing.rows[0].special_leave_days,
+    absent_days: absent_days ?? existing.rows[0].absent_days,
+  };
+  const totalsError = validateDayTotals(mergedTotals);
+  if (totalsError) return res.status(400).json({ message: totalsError });
 
   const result = await pool.query(
     `UPDATE attendance_records
@@ -83,10 +113,14 @@ const updateAttendance = asyncHandler(async (req, res) => {
          special_leave_days = COALESCE($5, special_leave_days),
          absent_days = COALESCE($6, absent_days),
          remarks = COALESCE($7, remarks),
+         is_drp = $8, drp_from_date = $9, drp_to_date = $10,
          updated_at = CURRENT_TIMESTAMP
-     WHERE id = $8
+     WHERE id = $11
      RETURNING *`,
-    [total_working_days, days_present, cl_days, academic_leave_days, special_leave_days, absent_days, remarks, id]
+    [
+      total_working_days, days_present, cl_days, academic_leave_days, special_leave_days, absent_days, remarks,
+      is_drp, drp_from_date, drp_to_date, id,
+    ]
   );
   await logAction(req.user.id, 'edit_attendance', 'attendance_record', id, req.body);
   res.json(result.rows[0]);

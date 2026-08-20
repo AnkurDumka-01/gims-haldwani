@@ -52,7 +52,12 @@ export default function MySubmissions() {
             {records.map((r) => (
               <tr key={r.id} className="border-t border-gray-100">
                 <td className="px-4 py-2">{r.student_name} <span className="text-gray-400">({r.roll_number})</span></td>
-                <td className="px-4 py-2">{MONTHS[r.month - 1]} {r.year}</td>
+                <td className="px-4 py-2">
+                  {MONTHS[r.month - 1]} {r.year}
+                  {r.is_drp && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">DRP</span>
+                  )}
+                </td>
                 <td className="px-4 py-2">{r.days_present} / {r.total_working_days}</td>
                 <td className="px-4 py-2">
                   <span className={`px-2 py-0.5 rounded-full text-xs capitalize ${STATUS_STYLE[r.status]}`}>{r.status}</span>
